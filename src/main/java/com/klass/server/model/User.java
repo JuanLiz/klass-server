@@ -1,9 +1,6 @@
 package com.klass.server.model;
 
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -11,36 +8,29 @@ import lombok.Setter;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-import java.util.Date;
-import java.util.List;
 
-
-@Document(collection = "users")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Document(collection = "users")
 public class User {
 
     @Id
     private String id;
-    @NotNull(message = "Role cannot be null")
+    @NotBlank(message = "Role cannot be blank or null")
     @Pattern(regexp = "admin|student|instructor", message = "Role must be admin, student or instructor")
     private String role;
-    @NotNull(message = "Name cannot be null")
+    @NotBlank(message = "Name cannot be blank or null")
     private String name;
-    @NotNull(message = "Last name cannot be null")
+    @NotBlank(message = "Last name cannot be blank or null")
     private String lastName;
-    @NotNull(message = "Email cannot be null")
+    @NotBlank(message = "Email cannot be blank or null")
     @Email(message = "Email should be valid")
     private String email;
-    @NotNull(message = "Password cannot be null")
+    @NotBlank(message = "Password cannot be blank or null")
     @Size(min = 8, max = 16, message = "Password must be between 8 and 16 characters")
     private String password;
     private String picture;
-    private List<String> courses; // Referencias a cursos
     private String passwordResetCode;
-    private Date createdAt;
-    private Date updatedAt;
-
 }
