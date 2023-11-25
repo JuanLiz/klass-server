@@ -29,13 +29,13 @@ public class CourseController {
         return courseRepository.findAll();
     }
 
-    // TODO Get courses by instructor
+    // Get courses by instructor
     @GetMapping("/instructor/{instructor}")
     public List<Course> getCoursesByInstructor(@PathVariable String instructor) {
         return courseRepository.findByInstructor(instructor);
     }
 
-    // TODO Get courses by student
+    // Get courses by student
     @GetMapping("/student/{student}")
     public List<Course> getCoursesByStudent(@PathVariable String student) {
         return courseRepository.findByStudent(student);
@@ -69,7 +69,7 @@ public class CourseController {
 
     // Additional methods
 
-    // TODO Publish/unpublish course
+    // Publish/unpublish course
     @PutMapping("/{courseId}/publish")
     public void publishCourse(@PathVariable String courseId) {
         Optional<Course> course = courseRepository.findById(courseId);
@@ -80,36 +80,7 @@ public class CourseController {
         }
     }
 
-
-    // TODO Students
-
-    // Add student to course
-    @PutMapping("/{courseId}/students/{studentId}")
-    public void addStudentToCourse(@PathVariable String courseId, @PathVariable String studentId) {
-        Optional<Course> course = courseRepository.findById(courseId);
-        if (course.isPresent()) {
-            Course courseToUpdate = course.get();
-            List<String> students = courseToUpdate.getStudents();
-            students.add(studentId);
-            courseToUpdate.setStudents(students);
-            courseRepository.save(courseToUpdate);
-        }
-    }
-
-    // Remove student from course
-    @DeleteMapping("/{courseId}/students/{studentId}")
-    public void removeStudentFromCourse(@PathVariable String courseId, @PathVariable String studentId) {
-        Optional<Course> course = courseRepository.findById(courseId);
-        if (course.isPresent()) {
-            Course courseToUpdate = course.get();
-            List<String> students = courseToUpdate.getStudents();
-            students.remove(studentId);
-            courseToUpdate.setStudents(students);
-            courseRepository.save(courseToUpdate);
-        }
-    }
-
-    // TODO Lessons
+    // Lessons
 
     // Add lesson to course
     @PutMapping("/{courseId}/lessons")
@@ -124,48 +95,27 @@ public class CourseController {
         }
     }
 
+    // Update lesson in course
+    @PutMapping("/{courseId}/lessons/{lessonOrder}")
+    public void updateLessonInCourse(@PathVariable String courseId, @PathVariable int lessonOrder, @RequestBody Lesson lesson) {
+        Optional<Course> course = courseRepository.findById(courseId);
+        if (course.isPresent()) {
+            Course courseToUpdate = course.get();
+            List<Lesson> lessons = courseToUpdate.getLessons();
+            lessons.set(lessonOrder-1, lesson);
+            courseToUpdate.setLessons(lessons);
+            courseRepository.save(courseToUpdate);
+        }
+    }
+
     // Remove lesson from course
-    @DeleteMapping("/{courseId}/lessons")
-    public void removeLessonFromCourse(@PathVariable String courseId, @RequestBody Lesson lesson) {
+    @DeleteMapping("/{courseId}/lessons/{lessonOrder}")
+    public void removeLessonFromCourse(@PathVariable String courseId, @PathVariable int lessonOrder) {
         Optional<Course> course = courseRepository.findById(courseId);
         if (course.isPresent()) {
             Course courseToUpdate = course.get();
             List<Lesson> lessons = courseToUpdate.getLessons();
-            lessons.remove(lesson);
-            courseToUpdate.setLessons(lessons);
-            courseRepository.save(courseToUpdate);
-        }
-    }
-
-    // Add activity to lesson
-    @PutMapping("/{courseId}/lessons/{lessonOrder}/activities/{activity}")
-    public void addActivityToLesson(@PathVariable String courseId, @PathVariable int lessonOrder, @PathVariable String activity) {
-        Optional<Course> course = courseRepository.findById(courseId);
-        if (course.isPresent()) {
-            Course courseToUpdate = course.get();
-            List<Lesson> lessons = courseToUpdate.getLessons();
-            Lesson lessonToUpdate = lessons.get(lessonOrder);
-            List<String> activities = lessonToUpdate.getActivities();
-            activities.add(activity);
-            lessonToUpdate.setActivities(activities);
-            lessons.set(lessonOrder, lessonToUpdate);
-            courseToUpdate.setLessons(lessons);
-            courseRepository.save(courseToUpdate);
-        }
-    }
-
-    // Remove activity from lesson
-    @DeleteMapping("/{courseId}/lessons/{lessonOrder}/activities/{activity}")
-    public void removeActivityFromLesson(@PathVariable String courseId, @PathVariable int lessonOrder, @PathVariable String activity) {
-        Optional<Course> course = courseRepository.findById(courseId);
-        if (course.isPresent()) {
-            Course courseToUpdate = course.get();
-            List<Lesson> lessons = courseToUpdate.getLessons();
-            Lesson lessonToUpdate = lessons.get(lessonOrder);
-            List<String> activities = lessonToUpdate.getActivities();
-            activities.remove(activity);
-            lessonToUpdate.setActivities(activities);
-            lessons.set(lessonOrder, lessonToUpdate);
+            lessons.remove(lessonOrder-1);
             courseToUpdate.setLessons(lessons);
             courseRepository.save(courseToUpdate);
         }

@@ -19,7 +19,6 @@ import java.util.List;
 public class Activity {
     @Id
     private String id;
-    private int order;
     private String type;
     private String name;
     private String content;
