@@ -24,6 +24,8 @@ public class UserController {
         return userRepository.findAll();
     }
 
+    //TODO: Get all users by role
+
     // Get user by id
     @GetMapping("/{userId}")
     @Nullable
@@ -32,6 +34,13 @@ public class UserController {
     }
 
     // Get user by email
+    @GetMapping("/email/{email}")
+    @Nullable
+    public User getUserByEmail(@PathVariable String email) {
+        return userRepository.findByEmail(email);
+    }
+
+    // Create user
     @PostMapping
     public User createUser(@RequestBody User user) {
         return userRepository.save(user);

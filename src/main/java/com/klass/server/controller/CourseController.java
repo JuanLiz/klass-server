@@ -29,13 +29,13 @@ public class CourseController {
         return courseRepository.findAll();
     }
 
-    // Get courses by instructor
+    // TODO Get courses by instructor
     @GetMapping("/instructor/{instructor}")
     public List<Course> getCoursesByInstructor(@PathVariable String instructor) {
         return courseRepository.findByInstructor(instructor);
     }
 
-    // Get courses by student
+    // TODO Get courses by student
     @GetMapping("/student/{student}")
     public List<Course> getCoursesByStudent(@PathVariable String student) {
         return courseRepository.findByStudent(student);
@@ -69,7 +69,7 @@ public class CourseController {
 
     // Additional methods
 
-    // Publish/unpublish course
+    // TODO Publish/unpublish course
     @PutMapping("/{courseId}/publish")
     public void publishCourse(@PathVariable String courseId) {
         Optional<Course> course = courseRepository.findById(courseId);
@@ -81,7 +81,7 @@ public class CourseController {
     }
 
 
-    // Students
+    // TODO Students
 
     // Add student to course
     @PutMapping("/{courseId}/students/{studentId}")
@@ -109,7 +109,7 @@ public class CourseController {
         }
     }
 
-    // Lessons
+    // TODO Lessons
 
     // Add lesson to course
     @PutMapping("/{courseId}/lessons")
@@ -170,7 +170,5 @@ public class CourseController {
             courseRepository.save(courseToUpdate);
         }
     }
-
-
 
 }

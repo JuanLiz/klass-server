@@ -70,7 +70,10 @@ public class ActivityController {
         if (activity.isPresent()) {
             Activity activityToUpdate = activity.get();
             List<String> completedBy = activityToUpdate.getCompletedBy();
-            completedBy.add(studentId);
+            // Add if not already in list
+            if (!completedBy.contains(studentId)) {
+                completedBy.add(studentId);
+            }
             activityToUpdate.setCompletedBy(completedBy);
             activityRepository.save(activityToUpdate);
         }
@@ -89,9 +92,9 @@ public class ActivityController {
         }
     }
 
-    // Submissions
+    // TODO Submissions (assignment)
 
-    // Add submission to activity
+    // Add submission to assignment
     @PutMapping("/{activityId}/submissions/{studentId}")
     public void addSubmissionToActivity(@PathVariable String activityId, @PathVariable String studentId, @RequestBody Submission submission) {
         Optional<Activity> activity = activityRepository.findById(activityId);
@@ -105,7 +108,7 @@ public class ActivityController {
         }
     }
 
-    // Read submission from activity
+    // Read submission from assignment
     @GetMapping("/{activityId}/submissions/{studentId}")
     @Nullable
     public Optional<Submission> getSubmissionFromActivity(@PathVariable String activityId, @PathVariable String studentId) {
@@ -122,7 +125,7 @@ public class ActivityController {
         return Optional.empty();
     }
 
-    // Remove submission from activity (Don't implement yet)
+    // Remove submission from assignment (Don't implement yet)
     @DeleteMapping("/{activityId}/submissions/{studentId}")
     public void removeSubmissionFromActivity(@PathVariable String activityId, @PathVariable String studentId) {
         Optional<Activity> activity = activityRepository.findById(activityId);
