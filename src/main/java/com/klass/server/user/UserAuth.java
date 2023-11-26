@@ -1,4 +1,6 @@
-package com.klass.server.model;
+package com.klass.server.user;
+
+// TODO change to record and  check auth implementation
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -9,9 +11,8 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class Submission {
-    private String student;
-    private String file;
-    private String grade;
+public class UserAuth {
+    private String email;
+    private String password;
 
 }

@@ -1,13 +1,17 @@
-package com.klass.server.model;
+package com.klass.server.activity;
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.bson.types.ObjectId;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 
+import java.util.ArrayList;
 import java.util.List;
 
 
@@ -23,8 +27,9 @@ public class Activity {
     private String name;
     private String content;
     private boolean enabled;
-    private List<String> completedBy;
-    private List<Submission> submissions;
+    @JsonSerialize(contentUsing = ToStringSerializer.class)
+    private List<ObjectId> completedBy = new ArrayList<>();
+    private List<Submission> submissions = new ArrayList<>();
     private String openDate;
     private String dueDate;
 

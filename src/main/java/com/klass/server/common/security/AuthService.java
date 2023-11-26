@@ -1,12 +1,11 @@
 package com.klass.server.common.security;
 
-import com.klass.server.model.User;
-import com.klass.server.repository.UserRepository;
+import com.klass.server.user.User;
+import com.klass.server.user.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;

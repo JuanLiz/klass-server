@@ -1,7 +1,7 @@
-package com.klass.server.controller;
+package com.klass.server.user;
 
-import com.klass.server.model.User;
-import com.klass.server.repository.UserRepository;
+import com.klass.server.user.User;
+import com.klass.server.user.UserRepository;
 import com.mongodb.lang.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;

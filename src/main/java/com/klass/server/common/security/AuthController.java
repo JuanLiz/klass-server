@@ -1,9 +1,8 @@
-package com.klass.server.controller;
+package com.klass.server.common.security;
 
 import com.klass.server.common.security.JWTToken;
 import com.klass.server.common.security.TokenService;
-import com.klass.server.model.User;
-import com.klass.server.model.UserAuth;
+import com.klass.server.user.UserAuth;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;

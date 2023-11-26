@@ -1,10 +1,13 @@
-package com.klass.server.model;
+package com.klass.server.course;
 
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.bson.types.ObjectId;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
@@ -25,7 +28,10 @@ public class Course {
     private String image;
     private String category;
     private boolean published;
-    private String instructor;
-    private List<String> students;
+    // Prevent returning as timestamp
+    @JsonSerialize(using = ToStringSerializer.class)
+    private ObjectId instructor;
+    @JsonSerialize(contentUsing = ToStringSerializer.class)
+    private List<ObjectId> students;
     private List<Lesson> lessons;
 }

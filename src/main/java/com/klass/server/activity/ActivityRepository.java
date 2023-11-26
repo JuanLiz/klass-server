@@ -1,6 +1,6 @@
-package com.klass.server.repository;
+package com.klass.server.activity;
 
-import com.klass.server.model.Activity;
+import com.klass.server.activity.Activity;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 
