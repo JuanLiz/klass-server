@@ -44,6 +44,7 @@ public class UserController {
         return userRepository.findById(userId);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     // Get user by email
     @GetMapping("/email/{email}")
     @Nullable
@@ -52,6 +53,7 @@ public class UserController {
     }
 
     // Create user
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
     public User createUser(@RequestBody User user) {
         // Encrypt password
@@ -66,6 +68,7 @@ public class UserController {
         return userRepository.save(user);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     // Delete user
     @DeleteMapping("/{userId}")
     public void deleteUser(@PathVariable String userId) {

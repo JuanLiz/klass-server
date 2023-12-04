@@ -5,7 +5,6 @@ import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
-import java.net.URL;
 
 @RestController
 @RequestMapping("/s3")

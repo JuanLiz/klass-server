@@ -9,6 +9,7 @@ import org.springframework.data.mongodb.core.aggregation.GroupOperation;
 import org.springframework.data.mongodb.core.aggregation.LookupOperation;
 import org.springframework.data.mongodb.core.aggregation.UnwindOperation;
 import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -61,6 +62,7 @@ public class ActivityController {
     //=== REST methods ===//
 
     // Get all activities
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
     public List<ActivityProjection> getAllActivities() {
 
@@ -103,17 +105,20 @@ public class ActivityController {
         ).getMappedResults().stream().findFirst();
     }
 
+    @PreAuthorize("hasRole('ADMIN') || hasRole('INSTRUCTOR')")
     @PostMapping
     public Activity createActivity(@RequestBody Activity activity) {
         return activityRepository.save(activity);
     }
 
+    @PreAuthorize("hasRole('ADMIN') || hasRole('INSTRUCTOR')")
     @PutMapping("/{activityId}")
     public Activity updateActivity(@PathVariable String activityId, @RequestBody Activity activity) {
         activity.setId(activityId);
         return activityRepository.save(activity);
     }
 
+    @PreAuthorize("hasRole('ADMIN') || hasRole('INSTRUCTOR')")
     @DeleteMapping("/{activityId}")
     public void deleteActivity(@PathVariable String activityId) {
         activityRepository.deleteById(activityId);
@@ -122,6 +127,7 @@ public class ActivityController {
     // Additional methods
 
     // Enable/disable activity
+    @PreAuthorize("hasRole('ADMIN') || hasRole('INSTRUCTOR')")
     @PutMapping("/{activityId}/availability")
     public void enableActivity(@PathVariable String activityId) {
         Optional<Activity> activity = activityRepository.findById(activityId);
@@ -135,6 +141,7 @@ public class ActivityController {
     // Completed
 
     // Add student to completedBy (mark as completed)
+    @PreAuthorize("hasRole('STUDENT')")
     @PutMapping("/{activityId}/completed/{studentId}")
     public void addStudentToCompletedBy(@PathVariable String activityId, @PathVariable ObjectId studentId) {
         Optional<Activity> activity = activityRepository.findById(activityId);
@@ -151,6 +158,7 @@ public class ActivityController {
     }
 
     // Remove student from completedBy (mark as incomplete)
+    @PreAuthorize("hasRole('STUDENT')")
     @DeleteMapping("/{activityId}/completed/{studentId}")
     public void removeStudentFromCompletedBy(@PathVariable String activityId, @PathVariable ObjectId studentId) {
         Optional<Activity> activity = activityRepository.findById(activityId);
@@ -167,6 +175,7 @@ public class ActivityController {
 
     // Add or update submission to assignment
     // TODO add validation: activity must be assignment
+    @PreAuthorize("hasRole('STUDENT')")
     @PutMapping("/{activityId}/submissions")
     public void addSubmissionToActivity(@PathVariable String activityId, @RequestBody Submission submission) {
         Optional<Activity> activity = activityRepository.findById(activityId);

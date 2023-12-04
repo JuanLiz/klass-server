@@ -1,14 +1,17 @@
 package com.klass.server.course;
 
+import com.klass.server.user.User;
+import com.klass.server.user.UserRepository;
 import com.mongodb.lang.Nullable;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.core.aggregation.Aggregation;
-import org.springframework.data.mongodb.core.aggregation.GroupOperation;
-import org.springframework.data.mongodb.core.aggregation.LookupOperation;
-import org.springframework.data.mongodb.core.aggregation.UnwindOperation;
+import org.springframework.data.mongodb.core.aggregation.*;
 import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -28,6 +31,9 @@ public class CourseController {
 
     @Autowired
     MongoTemplate mongoTemplate;
+
+    @Autowired
+    UserRepository userRepository;
 
     //=== Lookup aggregations for GET methods ===//
 
@@ -72,14 +78,32 @@ public class CourseController {
     //=== REST methods ===//
 
     // TODO: Add pagination
-    // TODO: 1. Role-based projections (GET)
-    // TODO: 2. Role-based access control, then abstract postman collections
+    // TODO: HttpResponse
+    // TODO: 2. Abstract postman collections
 
     // Get all courses
     @GetMapping
     public List<CourseProjection> getAllCourses() {
 
+        // Get current authentication
+        var auth = SecurityContextHolder.getContext()
+                .getAuthentication();
+
+        // Get user id
+        ObjectId userId = new ObjectId(userRepository.findByEmail(auth.getName()).getId());
+
+        // Dummy match for initialize
+        MatchOperation match = Aggregation.match(Criteria.where("_id").exists(true));
+
+        // Check user role (TODO: Is this boilerplate?)
+        if (auth.getAuthorities().contains(new SimpleGrantedAuthority("ROLE_INSTRUCTOR"))) {
+            match = Aggregation.match(Criteria.where("instructor").is(userId));
+        } else if (auth.getAuthorities().contains(new SimpleGrantedAuthority("ROLE_STUDENT"))) {
+            match = Aggregation.match(Criteria.where("students").in(userId));
+        }
+
         Aggregation aggregation = Aggregation.newAggregation(
+                match,
                 // Lessons
                 unwindLessons,
                 lookupActivities,
@@ -125,18 +149,21 @@ public class CourseController {
     }
 
     // Get courses by instructor
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/instructor/{instructor}")
     public List<Course> getCoursesByInstructor(@PathVariable ObjectId instructor) {
         return courseRepository.findByInstructor(instructor);
     }
 
     // Get courses by student
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/student/{student}")
     public List<Course> getCoursesByStudent(@PathVariable ObjectId student) {
         return courseRepository.findByStudent(student);
     }
 
     // Create course
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
     public Course createCourse(@RequestBody Course course) {
         System.out.println(course.toString());
@@ -144,6 +171,7 @@ public class CourseController {
     }
 
     // Update course
+    @PreAuthorize("hasRole('ADMIN') || hasRole('INSTRUCTOR')")
     @PutMapping("/{courseId}")
     public Course updateCourse(@PathVariable String courseId, @RequestBody Course course) {
         course.setId(courseId);
@@ -151,6 +179,7 @@ public class CourseController {
     }
 
     // Delete course
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{courseId}")
     public void deleteCourse(@PathVariable String courseId) {
         courseRepository.deleteById(courseId);
@@ -159,6 +188,7 @@ public class CourseController {
     // Additional methods
 
     // Publish/unpublish course
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{courseId}/publish")
     public void publishCourse(@PathVariable String courseId) {
         Optional<Course> course = courseRepository.findById(courseId);
