@@ -44,8 +44,9 @@ public class UserController {
         return userRepository.findById(userId);
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+
     // Get user by email
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/email/{email}")
     @Nullable
     public User getUserByEmail(@PathVariable String email) {
