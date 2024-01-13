@@ -1,6 +1,5 @@
 package com.klass.server.course;
 
-import com.klass.server.user.User;
 import com.klass.server.user.UserRepository;
 import com.mongodb.lang.Nullable;
 import org.bson.types.ObjectId;
@@ -11,7 +10,6 @@ import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -78,7 +76,7 @@ public class CourseController {
     //=== REST methods ===//
 
     // TODO: Add pagination
-    // TODO: HttpResponse
+    // TODO: ResponseEntity
     // TODO: 2. Abstract postman collections
 
     // Get all courses

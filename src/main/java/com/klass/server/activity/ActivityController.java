@@ -61,6 +61,9 @@ public class ActivityController {
 
     //=== REST methods ===//
 
+    // TODO: ResponseEntity
+    // TODO: Add method with preview projection
+
     // Get all activities
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping

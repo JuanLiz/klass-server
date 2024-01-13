@@ -20,6 +20,7 @@ import java.util.List;
 @Document(collection = "courses")
 public class Course {
 
+    // TODO add validations
     @Id
     private String id;
     private String name;
@@ -33,5 +34,6 @@ public class Course {
     private ObjectId instructor;
     @JsonSerialize(contentUsing = ToStringSerializer.class)
     private List<ObjectId> students;
+    // TODO avoid exception when returning empty list
     private List<Lesson> lessons;
 }

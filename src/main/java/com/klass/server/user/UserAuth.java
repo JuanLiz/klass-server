@@ -1,6 +1,6 @@
 package com.klass.server.user;
 
-// TODO change to record and  check auth implementation
+// TODO change to record and check auth implementation
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

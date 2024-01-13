@@ -21,6 +21,8 @@ import java.util.List;
 @AllArgsConstructor
 @Document(collection = "activities")
 public class Activity {
+
+    // TODO add validations
     @Id
     private String id;
     private String type;
