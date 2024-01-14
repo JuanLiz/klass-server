@@ -10,8 +10,9 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 public class ExceptionsHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<BadRequest> handleValidationExceptions(MethodArgumentNotValidException e) {
-        return ResponseEntity.badRequest().body(new BadRequest(400, e.getBindingResult().getFieldError().getDefaultMessage()));
+    public ResponseEntity<BadRequestResponse> handleValidationExceptions(MethodArgumentNotValidException e) {
+        BadRequestResponse response = new BadRequestResponse(400, e.getBindingResult().getFieldError().getDefaultMessage());
+        return ResponseEntity.badRequest().body(response);
     }
 
     // TODO existing email exception

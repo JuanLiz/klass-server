@@ -1,8 +1,6 @@
 package com.klass.server.course;
 
-import com.klass.server.user.User;
 import com.klass.server.user.UserProjection;
-import org.bson.types.ObjectId;
 
 import java.util.List;
 
@@ -18,4 +16,6 @@ public record CourseProjection(
         List<UserProjection> students,
         List<LessonProjection> lessons
 ) {
+
+
 }

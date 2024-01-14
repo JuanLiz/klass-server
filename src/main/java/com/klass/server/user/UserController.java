@@ -76,7 +76,7 @@ public class UserController {
         return ResponseEntity.created(url).body(newUser);
     }
 
-    // Update user with UpdateFirst
+    // Update user with UpdateFirst (Check if working) (TODO: Update all except password)
     @PutMapping("/{userId}")
     public ResponseEntity<UserProjection> updateUser(@PathVariable String userId, @RequestBody User user) {
         user.setId(userId);

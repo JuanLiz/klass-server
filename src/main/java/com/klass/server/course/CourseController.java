@@ -7,11 +7,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.aggregation.*;
 import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.util.UriComponentsBuilder;
 
+import java.net.URI;
 import java.util.List;
 import java.util.Optional;
 
@@ -75,13 +78,13 @@ public class CourseController {
 
     //=== REST methods ===//
 
-    // TODO: Add pagination
-    // TODO: ResponseEntity
+    // TODO: Add pagination and filtering
     // TODO: 2. Abstract postman collections
+    // TODO Slug availability
 
     // Get all courses
     @GetMapping
-    public List<CourseProjection> getAllCourses() {
+    public ResponseEntity<List<CourseProjection>> getAllCourses() {
 
         // Get current authentication
         var auth = SecurityContextHolder.getContext()
@@ -113,74 +116,123 @@ public class CourseController {
                 lookupStudents
         );
 
-
-        return mongoTemplate.aggregate(
+        return ResponseEntity.ok(mongoTemplate.aggregate(
                 aggregation,
                 "courses",
                 CourseProjection.class
-        ).getMappedResults();
+        ).getMappedResults());
     }
 
     // Get course by id
     @GetMapping("/{courseId}")
     @Nullable
-    public Optional<CourseProjection> getCourseById(@PathVariable String courseId) {
+    public ResponseEntity<CourseProjection> getCourseById(@PathVariable String courseId) {
+        try {
 
-        Aggregation aggregation = Aggregation.newAggregation(
-                Aggregation.match(Criteria.where("_id").is(courseId)),
-                // Lessons
-                unwindLessons,
-                lookupActivities,
-                groupLessons,
-                // Instructor
-                lookupInstructor,
-                unwindInstructor,
-                // Students
-                lookupStudents
-        );
+            // Get current authentication
+            var auth = SecurityContextHolder.getContext()
+                    .getAuthentication();
 
-        return mongoTemplate.aggregate(
-                aggregation,
-                "courses",
-                CourseProjection.class
-        ).getMappedResults().stream().findFirst();
+            // Get user id
+            ObjectId userId = new ObjectId(userRepository.findByEmail(auth.getName()).getId());
+
+            // Dummy match for initialize
+            MatchOperation match = Aggregation.match(Criteria.where("_id").exists(true));
+
+            // Check user role
+            if (auth.getAuthorities().contains(new SimpleGrantedAuthority("ROLE_INSTRUCTOR"))) {
+                match = Aggregation.match(Criteria.where("instructor").is(userId));
+            } else if (auth.getAuthorities().contains(new SimpleGrantedAuthority("ROLE_STUDENT"))) {
+                match = Aggregation.match(Criteria.where("students").in(userId));
+            }
+
+            // Use MongoRepository for validations
+            Optional<Course> course = courseRepository.findById(courseId);
+
+            // Check if course exists
+            if (course.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+            // Check if user is enrolled
+            else if (
+                    // Student
+                    (auth.getAuthorities().contains(new SimpleGrantedAuthority("ROLE_STUDENT"))
+                            && !course.get().getStudents().contains(userId))
+                            // Instructor
+                            || (auth.getAuthorities().contains(new SimpleGrantedAuthority("ROLE_INSTRUCTOR"))
+                            && !course.get().getInstructor().equals(userId))) {
+                return ResponseEntity.notFound().build();
+            }
+            // Check if course is published
+            else if (!course.get().isPublished()
+                    && auth.getAuthorities().contains(new SimpleGrantedAuthority("ROLE_STUDENT"))) {
+                return ResponseEntity.notFound().build();
+            }
+            // Return course
+            else {
+                Aggregation aggregation = Aggregation.newAggregation(
+                        Aggregation.match(Criteria.where("_id").is(courseId)),
+                        match,
+                        // Lessons
+                        unwindLessons,
+                        lookupActivities,
+                        groupLessons,
+                        // Instructor
+                        lookupInstructor,
+                        unwindInstructor,
+                        // Students
+                        lookupStudents
+                );
+
+                return ResponseEntity.ok(mongoTemplate.aggregate(
+                        aggregation,
+                        "courses",
+                        CourseProjection.class
+                ).getUniqueMappedResult());
+            }
+
+        } catch (Exception e) {
+            return ResponseEntity.notFound().build();
+        }
     }
 
-    // Get courses by instructor
+    // Get courses by instructor TODO: Deprecation with filter and pagination
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/instructor/{instructor}")
-    public List<Course> getCoursesByInstructor(@PathVariable ObjectId instructor) {
-        return courseRepository.findByInstructor(instructor);
+    public ResponseEntity<List<Course>> getCoursesByInstructor(@PathVariable ObjectId instructor) {
+        return ResponseEntity.ok(courseRepository.findByInstructor(instructor));
     }
 
-    // Get courses by student
+    // Get courses by student TODO: Deprecation with filter and pagination
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/student/{student}")
-    public List<Course> getCoursesByStudent(@PathVariable ObjectId student) {
-        return courseRepository.findByStudent(student);
+    public ResponseEntity<List<Course>> getCoursesByStudent(@PathVariable ObjectId student) {
+        return ResponseEntity.ok(courseRepository.findByStudent(student));
     }
 
     // Create course
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
-    public Course createCourse(@RequestBody Course course) {
-        System.out.println(course.toString());
-        return courseRepository.save(course);
+    public ResponseEntity<Course> createCourse(@RequestBody Course course, UriComponentsBuilder uriComponentsBuilder) {
+        Course newCourse = courseRepository.save(course);
+        URI url = uriComponentsBuilder.path("/courses/{id}").buildAndExpand(newCourse.getId()).toUri();
+        return ResponseEntity.created(url).body(newCourse);
     }
 
     // Update course
     @PreAuthorize("hasRole('ADMIN') || hasRole('INSTRUCTOR')")
     @PutMapping("/{courseId}")
-    public Course updateCourse(@PathVariable String courseId, @RequestBody Course course) {
+    public ResponseEntity<Course> updateCourse(@PathVariable String courseId, @RequestBody Course course) {
         course.setId(courseId);
-        return courseRepository.save(course);
+        return ResponseEntity.ok(courseRepository.save(course));
     }
 
     // Delete course
     @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{courseId}")
-    public void deleteCourse(@PathVariable String courseId) {
+    public ResponseEntity deleteCourse(@PathVariable String courseId) {
         courseRepository.deleteById(courseId);
+        return ResponseEntity.noContent().build();
     }
 
     // Additional methods
@@ -188,12 +240,15 @@ public class CourseController {
     // Publish/unpublish course
     @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{courseId}/publish")
-    public void publishCourse(@PathVariable String courseId) {
+    public ResponseEntity publishCourse(@PathVariable String courseId) {
         Optional<Course> course = courseRepository.findById(courseId);
         if (course.isPresent()) {
             Course courseToUpdate = course.get();
             courseToUpdate.setPublished(!courseToUpdate.isPublished());
             courseRepository.save(courseToUpdate);
+            return ResponseEntity.ok().build();
+        } else {
+            return ResponseEntity.notFound().build();
         }
     }
 
