@@ -10,6 +10,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/users")
@@ -44,14 +45,11 @@ public class UserController {
     // Get user by id
     @GetMapping("/{userId}")
     public ResponseEntity<UserProjection> getUserById(@PathVariable String userId) {
-        try {
-            User user = userRepository.findById(userId).get();
-            return ResponseEntity.ok(user.toProjection());
-        } catch (Exception e) {
-            return ResponseEntity.notFound().build();
-        }
-    }
+        Optional<User> user = userRepository.findById(userId);
+        return user.map(value -> ResponseEntity.ok(value.toProjection()))
+                .orElseGet(() -> ResponseEntity.notFound().build());
 
+    }
 
     // Get user by email
     @PreAuthorize("hasRole('ADMIN')")
@@ -76,11 +74,24 @@ public class UserController {
         return ResponseEntity.created(url).body(newUser);
     }
 
-    // Update user with UpdateFirst (Check if working) (TODO: Update all except password)
+    // Update user
     @PutMapping("/{userId}")
-    public ResponseEntity<UserProjection> updateUser(@PathVariable String userId, @RequestBody User user) {
-        user.setId(userId);
-        return ResponseEntity.ok(userRepository.save(user).toProjection());
+    public ResponseEntity<UserProjection> updateUser(@PathVariable String userId, @RequestBody UserProjection user) {
+
+        // Check if user exists
+        Optional<User> userToUpdate = userRepository.findById(userId);
+        if (userToUpdate.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        } else {
+            User userToSave = userToUpdate.get();
+            userToSave.setRole(user.role());
+            userToSave.setName(user.name());
+            userToSave.setLastName(user.lastName());
+            userToSave.setEmail(user.email());
+            userToSave.setPicture(user.picture());
+            userRepository.save(userToSave);
+            return ResponseEntity.ok(userToSave.toProjection());
+        }
     }
 
     @PreAuthorize("hasRole('ADMIN')")
