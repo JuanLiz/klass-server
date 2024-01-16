@@ -94,8 +94,8 @@ public class UserController {
         }
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
     // Delete user
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{userId}")
     public ResponseEntity deleteUser(@PathVariable String userId) {
         userRepository.deleteById(userId);

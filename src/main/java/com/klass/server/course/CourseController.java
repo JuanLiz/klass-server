@@ -2,6 +2,7 @@ package com.klass.server.course;
 
 import com.klass.server.user.UserRepository;
 import com.mongodb.lang.Nullable;
+import jakarta.validation.Valid;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 
@@ -76,6 +78,20 @@ public class CourseController {
             .as("students");
 
 
+    // All aggregations in order
+    LinkedList<AggregationOperation> courseAggregations = new LinkedList<>(List.of(
+            // Lessons
+            unwindLessons,
+            lookupActivities,
+            groupLessons,
+            // Instructor
+            lookupInstructor,
+            unwindInstructor,
+            // Students
+            lookupStudents
+    ));
+
+
     //=== REST methods ===//
 
     // TODO: Add pagination and filtering
@@ -93,31 +109,18 @@ public class CourseController {
         // Get user id
         ObjectId userId = new ObjectId(userRepository.findByEmail(auth.getName()).getId());
 
-        // Dummy match for initialize
-        MatchOperation match = Aggregation.match(Criteria.where("_id").exists(true));
+        LinkedList<AggregationOperation> aggregationList = courseAggregations;
 
         // Check user role (TODO: Is this boilerplate?)
         if (auth.getAuthorities().contains(new SimpleGrantedAuthority("ROLE_INSTRUCTOR"))) {
-            match = Aggregation.match(Criteria.where("instructor").is(userId));
+            // Add match to previous aggregation
+            aggregationList.addFirst(Aggregation.match(Criteria.where("instructor").is(userId)));
         } else if (auth.getAuthorities().contains(new SimpleGrantedAuthority("ROLE_STUDENT"))) {
-            match = Aggregation.match(Criteria.where("students").in(userId));
+            aggregationList.addFirst(Aggregation.match(Criteria.where("students").in(userId)));
         }
 
-        Aggregation aggregation = Aggregation.newAggregation(
-                match,
-                // Lessons
-                unwindLessons,
-                lookupActivities,
-                groupLessons,
-                // Instructor
-                lookupInstructor,
-                unwindInstructor,
-                // Students
-                lookupStudents
-        );
-
         return ResponseEntity.ok(mongoTemplate.aggregate(
-                aggregation,
+                Aggregation.newAggregation(aggregationList),
                 "courses",
                 CourseProjection.class
         ).getMappedResults());
@@ -170,22 +173,13 @@ public class CourseController {
             }
             // Return course
             else {
-                Aggregation aggregation = Aggregation.newAggregation(
-                        Aggregation.match(Criteria.where("_id").is(courseId)),
-                        match,
-                        // Lessons
-                        unwindLessons,
-                        lookupActivities,
-                        groupLessons,
-                        // Instructor
-                        lookupInstructor,
-                        unwindInstructor,
-                        // Students
-                        lookupStudents
-                );
+                LinkedList<AggregationOperation> aggregationList = courseAggregations;
+                // Add match and filter to previous aggregation
+                aggregationList.addFirst(match);
+                aggregationList.addFirst(Aggregation.match(Criteria.where("_id").is(courseId)));
 
                 return ResponseEntity.ok(mongoTemplate.aggregate(
-                        aggregation,
+                        Aggregation.newAggregation(aggregationList),
                         "courses",
                         CourseProjection.class
                 ).getUniqueMappedResult());
@@ -213,7 +207,7 @@ public class CourseController {
     // Create course
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
-    public ResponseEntity<Course> createCourse(@RequestBody Course course, UriComponentsBuilder uriComponentsBuilder) {
+    public ResponseEntity<Course> createCourse(@RequestBody @Valid Course course, UriComponentsBuilder uriComponentsBuilder) {
         Course newCourse = courseRepository.save(course);
         URI url = uriComponentsBuilder.path("/courses/{id}").buildAndExpand(newCourse.getId()).toUri();
         return ResponseEntity.created(url).body(newCourse);
@@ -222,7 +216,7 @@ public class CourseController {
     // Update course
     @PreAuthorize("hasRole('ADMIN') || hasRole('INSTRUCTOR')")
     @PutMapping("/{courseId}")
-    public ResponseEntity<Course> updateCourse(@PathVariable String courseId, @RequestBody Course course) {
+    public ResponseEntity<Course> updateCourse(@PathVariable String courseId, @RequestBody @Valid Course course) {
         course.setId(courseId);
         return ResponseEntity.ok(courseRepository.save(course));
     }

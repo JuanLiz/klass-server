@@ -4,7 +4,6 @@ package com.klass.server.course;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -13,6 +12,7 @@ import org.bson.types.ObjectId;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Getter
@@ -22,7 +22,8 @@ import java.util.List;
 @Document(collection = "courses")
 public class Course {
 
-    // TODO add validations
+    //TODO add timestamps
+
     @Id
     private String id;
 
@@ -39,16 +40,14 @@ public class Course {
 
     private String category;
 
-    private boolean published;
+    private boolean published = false;
 
-    @NotNull(message = "An instructor ID must be provided")
     // Prevent returning as timestamp
     @JsonSerialize(using = ToStringSerializer.class)
     private ObjectId instructor;
 
     @JsonSerialize(contentUsing = ToStringSerializer.class)
-    private List<ObjectId> students;
+    private List<ObjectId> students = new ArrayList<>();
 
-    // TODO avoid exception when returning empty list
-    private List<Lesson> lessons;
+    private List<Lesson> lessons = new ArrayList<>();
 }

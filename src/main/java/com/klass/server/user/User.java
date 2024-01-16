@@ -27,6 +27,8 @@ import java.util.List;
 @Document(collection = "users")
 public class User implements UserDetails {
 
+    //TODO Add timestamps
+
     @Id
     private String id;
 

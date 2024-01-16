@@ -23,6 +23,7 @@ import java.util.List;
 public class Activity {
 
     // TODO add validations
+    // TODO add timestamps
     @Id
     private String id;
     private String type;
