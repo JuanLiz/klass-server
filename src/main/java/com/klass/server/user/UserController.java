@@ -2,6 +2,8 @@ package com.klass.server.user;
 
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -9,7 +11,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
-import java.util.List;
 import java.util.Optional;
 
 @RestController
@@ -27,19 +28,11 @@ public class UserController {
     private PasswordEncoder passwordEncoder;
 
     // Get all users
-    // TODO filtering and pagination
+    // TODO filtering
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
-    public ResponseEntity<List<UserProjection>> getAllUsers() {
-        List<UserProjection> users = userRepository.findAll().stream().map(User::toProjection).toList();
-        return ResponseEntity.ok(users);
-    }
-
-    // Get all users by role
-    @PreAuthorize("hasRole('ADMIN')")
-    @GetMapping("/role/{role}")
-    public ResponseEntity<List<User>> getAllUsersByRole(@PathVariable String role) {
-        return ResponseEntity.ok(userRepository.findAllByRole(role));
+    public ResponseEntity<Page<UserProjection>> getAllUsers(Pageable pageable) {
+        return ResponseEntity.ok(userRepository.findAll(pageable).map(User::toProjection));
     }
 
     // Get user by id
@@ -66,12 +59,12 @@ public class UserController {
     // Create user
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
-    public ResponseEntity<User> createUser(@RequestBody @Valid User user, UriComponentsBuilder uriComponentsBuilder) {
+    public ResponseEntity<UserProjection> createUser(@RequestBody @Valid User user, UriComponentsBuilder uriComponentsBuilder) {
         // Encrypt password
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         User newUser = userRepository.save(user);
         URI url = uriComponentsBuilder.path("/users/{id}").buildAndExpand(newUser.getId()).toUri();
-        return ResponseEntity.created(url).body(newUser);
+        return ResponseEntity.created(url).body(newUser.toProjection());
     }
 
     // Update user
@@ -102,7 +95,7 @@ public class UserController {
         return ResponseEntity.noContent().build();
     }
 
-    // TODO change password
+    // TODO change password (SES)
 
 
 }

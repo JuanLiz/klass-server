@@ -1,5 +1,6 @@
 package com.klass.server.common.exceptions;
 
+import com.mongodb.MongoWriteException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -10,11 +11,14 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 public class ExceptionsHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<BadRequestResponse> handleValidationExceptions(MethodArgumentNotValidException e) {
-        BadRequestResponse response = new BadRequestResponse(400, e.getBindingResult().getFieldError().getDefaultMessage());
-        return ResponseEntity.badRequest().body(response);
+    public ResponseEntity<ErrorResponse> handleValidationExceptions(MethodArgumentNotValidException e) {
+        return ResponseEntity.badRequest().body(new ErrorResponse(
+                400,
+                e.getBindingResult().getFieldError().getDefaultMessage()));
     }
 
-    // TODO existing email exception
-
+    @ExceptionHandler(MongoWriteException.class)
+    public ResponseEntity<ErrorResponse> handleMongoWriteExceptions(MongoWriteException e) {
+        return ResponseEntity.badRequest().body(new ErrorResponse(400, e.getError().getMessage()));
+    }
 }

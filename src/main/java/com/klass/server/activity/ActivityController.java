@@ -1,17 +1,19 @@
 package com.klass.server.activity;
 
 import com.mongodb.lang.Nullable;
+import jakarta.validation.Valid;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.core.aggregation.Aggregation;
-import org.springframework.data.mongodb.core.aggregation.GroupOperation;
-import org.springframework.data.mongodb.core.aggregation.LookupOperation;
-import org.springframework.data.mongodb.core.aggregation.UnwindOperation;
+import org.springframework.data.mongodb.core.aggregation.*;
 import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.util.UriComponentsBuilder;
 
+import java.net.URI;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 
@@ -59,72 +61,77 @@ public class ActivityController {
             .first("openDate").as("openDate")
             .first("dueDate").as("dueDate");
 
+    // All aggregations ordered
+    LinkedList<AggregationOperation> activityAggregations = new LinkedList<>(List.of(
+            // Student in submission
+            unwindSubmissions,
+            lookupSubmissionStudent,
+            unwindSubmissionStudent,
+            groupSubmissions,
+            // CompletedBy students
+            lookupCompletedBy
+    ));
+
+
     //=== REST methods ===//
 
-    // TODO: ResponseEntity
-    // TODO: Add method with preview projection
+    // TODO: Activity preview projection
 
     // Get all activities
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
-    public List<ActivityProjection> getAllActivities() {
-
-        Aggregation aggregation = Aggregation.newAggregation(
-                // Student in submission
-                unwindSubmissions,
-                lookupSubmissionStudent,
-                unwindSubmissionStudent,
-                groupSubmissions,
-                // CompletedBy students
-                lookupCompletedBy
-        );
-
-        return mongoTemplate.aggregate(
-                aggregation,
+    public ResponseEntity<List<ActivityProjection>> getAllActivities() {
+        return ResponseEntity.ok(mongoTemplate.aggregate(
+                Aggregation.newAggregation(activityAggregations),
                 "activities",
                 ActivityProjection.class
-        ).getMappedResults();
+        ).getMappedResults());
     }
 
     // Get activity by id
     @GetMapping("/{activityId}")
     @Nullable
-    public Optional<ActivityProjection> getActivityById(@PathVariable String activityId) {
-        Aggregation aggregation = Aggregation.newAggregation(
-                Aggregation.match(Criteria.where("_id").is(activityId)),
-                // Student in submission
-                unwindSubmissions,
-                lookupSubmissionStudent,
-                unwindSubmissionStudent,
-                groupSubmissions,
-                // CompletedBy students
-                lookupCompletedBy
-        );
+    public ResponseEntity<ActivityProjection> getActivityById(@PathVariable String activityId) {
 
-        return mongoTemplate.aggregate(
-                aggregation,
-                "activities",
-                ActivityProjection.class
-        ).getMappedResults().stream().findFirst();
+        LinkedList<AggregationOperation> aggregationList = activityAggregations;
+        aggregationList.addFirst(Aggregation.match(Criteria.where("_id").is(activityId)));
+
+        try {
+            return ResponseEntity.ok(mongoTemplate.aggregate(
+                    Aggregation.newAggregation(aggregationList),
+                    "activities",
+                    ActivityProjection.class
+            ).getUniqueMappedResult());
+        } catch (Exception e) {
+            return ResponseEntity.notFound().build();
+        }
     }
 
+    // Create activity
     @PreAuthorize("hasRole('ADMIN') || hasRole('INSTRUCTOR')")
     @PostMapping
-    public Activity createActivity(@RequestBody Activity activity) {
-        return activityRepository.save(activity);
+    public ResponseEntity<Activity> createActivity(@RequestBody @Valid Activity activity, UriComponentsBuilder uriComponentsBuilder) {
+        Activity newActivity = activityRepository.save(activity);
+        URI url = uriComponentsBuilder.path("/activities/{id}")
+                .buildAndExpand(newActivity.getId())
+                .toUri();
+        return ResponseEntity.created(url).body(newActivity);
     }
 
+    // Update activity
     @PreAuthorize("hasRole('ADMIN') || hasRole('INSTRUCTOR')")
     @PutMapping("/{activityId}")
-    public Activity updateActivity(@PathVariable String activityId, @RequestBody Activity activity) {
+    public ResponseEntity<Activity> updateActivity(@PathVariable String activityId, @RequestBody @Valid Activity activity) {
         activity.setId(activityId);
-        return activityRepository.save(activity);
+        return ResponseEntity.ok(activityRepository.save(activity));
     }
 
+    // Delete activity
     @PreAuthorize("hasRole('ADMIN') || hasRole('INSTRUCTOR')")
     @DeleteMapping("/{activityId}")
-    public void deleteActivity(@PathVariable String activityId) {
+    public ResponseEntity deleteActivity(@PathVariable String activityId) {
         activityRepository.deleteById(activityId);
+        return ResponseEntity.noContent().build();
     }
 
     // Additional methods
@@ -132,13 +139,17 @@ public class ActivityController {
     // Enable/disable activity
     @PreAuthorize("hasRole('ADMIN') || hasRole('INSTRUCTOR')")
     @PutMapping("/{activityId}/availability")
-    public void enableActivity(@PathVariable String activityId) {
+    public ResponseEntity enableActivity(@PathVariable String activityId) {
         Optional<Activity> activity = activityRepository.findById(activityId);
-        if (activity.isPresent()) {
+        if (activity.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        } else {
             Activity activityToUpdate = activity.get();
             activityToUpdate.setEnabled(!activityToUpdate.isEnabled());
             activityRepository.save(activityToUpdate);
+            return ResponseEntity.ok().build();
         }
+
     }
 
     // Completed
@@ -146,9 +157,11 @@ public class ActivityController {
     // Add student to completedBy (mark as completed)
     @PreAuthorize("hasRole('STUDENT')")
     @PutMapping("/{activityId}/completed/{studentId}")
-    public void addStudentToCompletedBy(@PathVariable String activityId, @PathVariable ObjectId studentId) {
+    public ResponseEntity addStudentToCompletedBy(@PathVariable String activityId, @PathVariable ObjectId studentId) {
         Optional<Activity> activity = activityRepository.findById(activityId);
-        if (activity.isPresent()) {
+        if (activity.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        } else {
             Activity activityToUpdate = activity.get();
             List<ObjectId> completedBy = activityToUpdate.getCompletedBy();
             // Add if not already in list
@@ -157,32 +170,35 @@ public class ActivityController {
             }
             activityToUpdate.setCompletedBy(completedBy);
             activityRepository.save(activityToUpdate);
+            return ResponseEntity.ok().build();
         }
     }
 
-    // Remove student from completedBy (mark as incomplete)
+    // Remove student from completedBy (mark as incomplete). TODO Deprecation with front
     @PreAuthorize("hasRole('STUDENT')")
     @DeleteMapping("/{activityId}/completed/{studentId}")
-    public void removeStudentFromCompletedBy(@PathVariable String activityId, @PathVariable ObjectId studentId) {
+    public ResponseEntity removeStudentFromCompletedBy(@PathVariable String activityId, @PathVariable ObjectId studentId) {
         Optional<Activity> activity = activityRepository.findById(activityId);
-        if (activity.isPresent()) {
+        if (activity.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        } else {
             Activity activityToUpdate = activity.get();
             List<ObjectId> completedBy = activityToUpdate.getCompletedBy();
             completedBy.removeIf(student -> student.equals(studentId));
             activityToUpdate.setCompletedBy(completedBy);
             activityRepository.save(activityToUpdate);
+            return ResponseEntity.ok().build();
         }
     }
 
     // TODO Submissions projection
 
     // Add or update submission to assignment
-    // TODO add validation: activity must be assignment
     @PreAuthorize("hasRole('STUDENT')")
     @PutMapping("/{activityId}/submissions")
-    public void addSubmissionToActivity(@PathVariable String activityId, @RequestBody Submission submission) {
+    public ResponseEntity addSubmissionToActivity(@PathVariable String activityId, @RequestBody Submission submission) {
         Optional<Activity> activity = activityRepository.findById(activityId);
-        if (activity.isPresent()) {
+        if (activity.isPresent() && activity.get().getType().equals("assign")) {
             Activity activityToUpdate = activity.get();
             List<Submission> submissions = activityToUpdate.getSubmissions();
             submissions.removeIf(submission1 -> submission1.getStudent().equals(submission.getStudent()));
@@ -191,24 +207,31 @@ public class ActivityController {
             activityRepository.save(activityToUpdate);
             // Mark as completed
             addStudentToCompletedBy(activityId, submission.getStudent());
+            return ResponseEntity.ok().build();
+        } else {
+            return ResponseEntity.notFound().build();
         }
     }
 
     // Read submission from assignment
     @GetMapping("/{activityId}/submissions/{studentId}")
     @Nullable
-    public Optional<Submission> getSubmissionFromActivity(@PathVariable String activityId, @PathVariable ObjectId studentId) {
+    public ResponseEntity<Submission> getSubmissionFromActivity(@PathVariable String activityId, @PathVariable ObjectId studentId) {
         Optional<Activity> activity = activityRepository.findById(activityId);
-        if (activity.isPresent()) {
+        if (activity.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        } else {
             Activity activityToRead = activity.get();
             List<Submission> submissions = activityToRead.getSubmissions();
-            for (Submission submission : submissions) {
-                if (submission.getStudent().equals(studentId)) {
-                    return Optional.of(submission);
-                }
-            }
+
+            // Return submission searching student
+            return submissions.stream()
+                    .filter(submission -> submission.getStudent().equals(studentId))
+                    .findFirst()
+                    .map(ResponseEntity::ok)
+                    .orElse(ResponseEntity.notFound().build());
         }
-        return Optional.empty();
+
     }
 
 }

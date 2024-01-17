@@ -26,6 +26,11 @@ public class CourseController {
 
     private final CourseRepository courseRepository;
 
+    // Define roles
+    SimpleGrantedAuthority ROLE_ADMIN = new SimpleGrantedAuthority("ROLE_ADMIN");
+    SimpleGrantedAuthority ROLE_INSTRUCTOR = new SimpleGrantedAuthority("ROLE_INSTRUCTOR");
+    SimpleGrantedAuthority ROLE_STUDENT = new SimpleGrantedAuthority("ROLE_STUDENT");
+
 
     @Autowired
     public CourseController(CourseRepository courseRepository) {
@@ -78,7 +83,7 @@ public class CourseController {
             .as("students");
 
 
-    // All aggregations in order
+    // All aggregations ordered
     LinkedList<AggregationOperation> courseAggregations = new LinkedList<>(List.of(
             // Lessons
             unwindLessons,
@@ -97,6 +102,7 @@ public class CourseController {
     // TODO: Add pagination and filtering
     // TODO: 2. Abstract postman collections
     // TODO Slug availability
+    // TODO: Course preview projection
 
     // Get all courses
     @GetMapping
@@ -112,10 +118,10 @@ public class CourseController {
         LinkedList<AggregationOperation> aggregationList = courseAggregations;
 
         // Check user role (TODO: Is this boilerplate?)
-        if (auth.getAuthorities().contains(new SimpleGrantedAuthority("ROLE_INSTRUCTOR"))) {
+        if (auth.getAuthorities().contains(ROLE_INSTRUCTOR)) {
             // Add match to previous aggregation
             aggregationList.addFirst(Aggregation.match(Criteria.where("instructor").is(userId)));
-        } else if (auth.getAuthorities().contains(new SimpleGrantedAuthority("ROLE_STUDENT"))) {
+        } else if (auth.getAuthorities().contains(ROLE_STUDENT)) {
             aggregationList.addFirst(Aggregation.match(Criteria.where("students").in(userId)));
         }
 
@@ -143,9 +149,9 @@ public class CourseController {
             MatchOperation match = Aggregation.match(Criteria.where("_id").exists(true));
 
             // Check user role
-            if (auth.getAuthorities().contains(new SimpleGrantedAuthority("ROLE_INSTRUCTOR"))) {
+            if (auth.getAuthorities().contains(ROLE_INSTRUCTOR)) {
                 match = Aggregation.match(Criteria.where("instructor").is(userId));
-            } else if (auth.getAuthorities().contains(new SimpleGrantedAuthority("ROLE_STUDENT"))) {
+            } else if (auth.getAuthorities().contains(ROLE_STUDENT)) {
                 match = Aggregation.match(Criteria.where("students").in(userId));
             }
 
@@ -158,17 +164,17 @@ public class CourseController {
             }
             // Check if user is enrolled
             else if (
-                    // Student
-                    (auth.getAuthorities().contains(new SimpleGrantedAuthority("ROLE_STUDENT"))
+                // Student
+                    (auth.getAuthorities().contains(ROLE_STUDENT)
                             && !course.get().getStudents().contains(userId))
                             // Instructor
-                            || (auth.getAuthorities().contains(new SimpleGrantedAuthority("ROLE_INSTRUCTOR"))
+                            || (auth.getAuthorities().contains(ROLE_INSTRUCTOR)
                             && !course.get().getInstructor().equals(userId))) {
                 return ResponseEntity.notFound().build();
             }
             // Check if course is published
             else if (!course.get().isPublished()
-                    && auth.getAuthorities().contains(new SimpleGrantedAuthority("ROLE_STUDENT"))) {
+                    && auth.getAuthorities().contains(ROLE_STUDENT)) {
                 return ResponseEntity.notFound().build();
             }
             // Return course
@@ -209,7 +215,9 @@ public class CourseController {
     @PostMapping
     public ResponseEntity<Course> createCourse(@RequestBody @Valid Course course, UriComponentsBuilder uriComponentsBuilder) {
         Course newCourse = courseRepository.save(course);
-        URI url = uriComponentsBuilder.path("/courses/{id}").buildAndExpand(newCourse.getId()).toUri();
+        URI url = uriComponentsBuilder.path("/courses/{id}")
+                .buildAndExpand(newCourse.getId())
+                .toUri();
         return ResponseEntity.created(url).body(newCourse);
     }
 
